@@ -134,3 +134,16 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Next.js
+.next/
+next-env.d.ts
+
+# Replit
+.local/

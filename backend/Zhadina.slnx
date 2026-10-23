@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Zhadina.Api.Tests/Zhadina.Api.Tests.csproj" />
+  <Project Path="Zhadina.Api/Zhadina.Api.csproj" />
+</Solution>

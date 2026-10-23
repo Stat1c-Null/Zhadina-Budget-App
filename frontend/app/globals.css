@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/* Zhadina palette: darkest → brightest. */
+@theme {
+  --color-bg: #0c0719;
+  --color-surface: #25174c;
+  --color-border: #3e267f;
+  --color-primary-hover: #5635b2;
+  --color-primary: #6f44e5;
+  --color-text: #f4f1ff;
+  --color-muted: #b9addf;
+  --color-danger: #ff9bb0;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
