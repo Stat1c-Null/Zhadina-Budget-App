@@ -1,13 +1,13 @@
 modules = ["nodejs-22"]
-run = "bash scripts/dev.sh"
+run = "bash scripts/linux/dev.sh"
 
 [nix]
 channel = "stable-25_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["bash", "scripts/build.sh"]
-run = ["bash", "scripts/start.sh"]
+build = ["bash", "scripts/linux/build.sh"]
+run = ["bash", "scripts/linux/start.sh"]
 
 # Only Next.js is public; the API stays on loopback (deployments allow one external port).
 [[ports]]

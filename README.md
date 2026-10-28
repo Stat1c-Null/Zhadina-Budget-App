@@ -28,8 +28,19 @@ Login and sign-up are rate limited per IP (10/min). Five failed logins lock the 
 Prerequisites: .NET 10 SDK, Node 22, and PostgreSQL on `localhost:5432` with a `postgres` user that can log in without a password (trust auth). The connection string is in `backend/Zhadina.Api/appsettings.Development.json`.
 
 ```bash
-bash scripts/dev.sh          # API on 127.0.0.1:5000 (applies migrations on start) + Next.js on :3000
+bash scripts/linux/dev.sh    # API on 127.0.0.1:5000 (applies migrations on start) + Next.js on :3000
 ```
+
+On Windows (PowerShell), the same scripts live in `scripts/windows/`. You only need the .NET 10 SDK and Node 22: `dev.ps1` first runs `db.ps1`, which on first use downloads a portable PostgreSQL 17 into `.postgres/` (gitignored, ~140 MB) and creates a trust-auth server on `localhost:5432`. The server keeps running after `dev.ps1` exits.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\windows\dev.ps1           # DB + API + Next.js
+powershell -ExecutionPolicy Bypass -File scripts\windows\db.ps1 stop       # also: start, status
+```
+
+To wipe the local database, stop it and delete `.postgres\data`; the next start re-creates it and the API re-applies migrations.
+
+> **Switching between WSL and Windows:** `node_modules` contains platform-specific binaries (Next's SWC compiler, the `.bin` launchers). Run `npm ci` in `frontend/` from the OS you're about to use. An install from WSL won't run on Windows (`'next' is not recognized`), and vice versa.
 
 Then open http://localhost:3000.
 
@@ -51,6 +62,6 @@ cd backend && dotnet tool restore && dotnet ef migrations add <Name> --project Z
 
 1. Import the repo into Replit and add a PostgreSQL database. Replit sets `DATABASE_URL`, which the API converts to an Npgsql connection string.
 2. `.replit` / `replit.nix` provide Node 22 and the .NET 10 SDK.
-3. Deploy. The build runs `scripts/build.sh`, and the app starts with `scripts/start.sh`. Only port 3000 (Next.js) is public.
+3. Deploy. The build runs `scripts/linux/build.sh`, and the app starts with `scripts/linux/start.sh`. Only port 3000 (Next.js) is public.
 
 Migrations run automatically on API startup against whichever database `DATABASE_URL` points to.

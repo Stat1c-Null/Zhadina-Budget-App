@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Local development: API with hot reload on 127.0.0.1:5000, Next.js dev server on :3000.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 trap 'kill 0' EXIT
 

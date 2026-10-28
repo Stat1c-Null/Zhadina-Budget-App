@@ -147,3 +147,6 @@ next-env.d.ts
 
 # Replit
 .local/
+
+# Local PostgreSQL for Windows dev (scripts/windows/db.ps1)
+.postgres/
