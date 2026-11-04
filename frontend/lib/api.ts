@@ -1,9 +1,14 @@
-// Typed wrappers for the C# auth API (backend/Zhadina.Api/Features/Auth).
+// Typed wrappers for the C# API (backend/Zhadina.Api/Features).
 // Requests are same-origin; next.config.ts rewrites /api/* to the backend.
 
 export type User = { id: string; email: string };
 
-export type FieldErrors = Partial<Record<"email" | "password", string[]>>;
+export type BankAccount = { id: string; name: string; balance: number };
+
+// balance is null when the field was left empty, so the backend's validation can report it.
+export type BankAccountInput = { name: string; balance: number | null };
+
+export type FieldErrors = Partial<Record<string, string[]>>;
 
 export class ApiError extends Error {
   constructor(
@@ -16,11 +21,12 @@ export class ApiError extends Error {
 }
 
 const FALLBACK_MESSAGES: Record<number, string> = {
+  404: "This no longer exists. Reload the page to see the latest.",
   429: "Too many attempts. Wait a minute and try again.",
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api/auth${path}`, {
+  const response = await fetch(path, {
     ...init,
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
@@ -39,10 +45,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   );
 }
 
-const post = <T>(path: string, body?: unknown) =>
-  request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
+const send = <T>(method: string, path: string, body?: unknown) =>
+  request<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
 
-export const signUp = (email: string, password: string) => post<User>("/sign-up", { email, password });
-export const login = (email: string, password: string) => post<User>("/login", { email, password });
-export const signOut = () => post<void>("/sign-out");
-export const me = () => request<User>("/me");
+export const signUp = (email: string, password: string) =>
+  send<User>("POST", "/api/auth/sign-up", { email, password });
+export const login = (email: string, password: string) => send<User>("POST", "/api/auth/login", { email, password });
+export const signOut = () => send<void>("POST", "/api/auth/sign-out");
+export const me = () => request<User>("/api/auth/me");
+
+export const listBankAccounts = () => request<BankAccount[]>("/api/bank-accounts");
+export const createBankAccount = (input: BankAccountInput) =>
+  send<BankAccount>("POST", "/api/bank-accounts", input);
+export const updateBankAccount = (id: string, input: BankAccountInput) =>
+  send<BankAccount>("PUT", `/api/bank-accounts/${id}`, input);
+export const deleteBankAccount = (id: string) => send<void>("DELETE", `/api/bank-accounts/${id}`);
