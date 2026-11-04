@@ -6,12 +6,12 @@ using Zhadina.Api.Features.Auth;
 
 namespace Zhadina.Api.Tests;
 
-public class BankAccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFactory>
+public class AccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
-    private const string BasePath = "/api/bank-accounts";
+    private const string BasePath = "/api/accounts";
 
     // Declared here rather than reusing the API's type so these tests pin the JSON contract the frontend relies on.
-    private record AccountDto(Guid Id, string Name, decimal Balance);
+    private record AccountDto(Guid Id, string Name, string Type, decimal Balance);
 
     private async Task<HttpClient> SignedInClient()
     {
@@ -23,9 +23,9 @@ public class BankAccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFa
         return client;
     }
 
-    private static async Task<AccountDto> Create(HttpClient client, string name, decimal balance)
+    private static async Task<AccountDto> Create(HttpClient client, string name, decimal balance, string type = "Bank")
     {
-        var response = await client.PostAsJsonAsync(BasePath, new { name, balance });
+        var response = await client.PostAsJsonAsync(BasePath, new { name, type, balance });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<AccountDto>())!;
     }
@@ -42,7 +42,7 @@ public class BankAccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFa
     {
         var request = new HttpRequestMessage(new HttpMethod(method), path);
         if (method is "POST" or "PUT")
-            request.Content = JsonContent.Create(new { name = "Checking", balance = 1m });
+            request.Content = JsonContent.Create(new { name = "Checking", type = "Bank", balance = 1m });
 
         var response = await factory.CreateClient().SendAsync(request);
 
@@ -108,32 +108,80 @@ public class BankAccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFa
     {
         var client = await SignedInClient();
 
-        var response = await client.PostAsJsonAsync(BasePath, new { name, balance });
+        var response = await client.PostAsJsonAsync(BasePath, new { name, type = "Bank", balance });
 
         await AssertFieldError(response, field);
         Assert.Empty(await List(client));
+    }
+
+    [Theory]
+    [InlineData("Bank")]
+    [InlineData("Cash")]
+    [InlineData("Investment")]
+    [InlineData("RothIra")]
+    [InlineData("TraditionalIra")]
+    [InlineData("Retirement401k")]
+    [InlineData("CreditCard")]
+    [InlineData("Other")]
+    public async Task Create_StoresEachAccountType(string type)
+    {
+        var client = await SignedInClient();
+
+        var account = await Create(client, "Account", 1m, type);
+
+        Assert.Equal(type, account.Type);
+        Assert.Equal([account], await List(client));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    [InlineData("Savings bond")]
+    [InlineData("bank")] // Names match exactly, since the frontend always sends the exact name.
+    [InlineData("3")] // Enum.TryParse would accept a member number like this one.
+    public async Task Create_InvalidType_ReturnsAFieldError(string? type)
+    {
+        var client = await SignedInClient();
+
+        var response = await client.PostAsJsonAsync(BasePath, new { name = "Checking", type, balance = 1m });
+
+        await AssertFieldError(response, "type");
+        Assert.Empty(await List(client));
+    }
+
+    [Fact]
+    public async Task Update_InvalidType_ReturnsAFieldError_AndKeepsTheOldType()
+    {
+        var client = await SignedInClient();
+        var account = await Create(client, "Roth", 10m, "RothIra");
+
+        var response = await client.PutAsJsonAsync(
+            $"{BasePath}/{account.Id}", new { name = "Roth", type = "Nope", balance = 10m });
+
+        await AssertFieldError(response, "type");
+        Assert.Equal([account], await List(client));
     }
 
     [Fact]
     public async Task Create_NameOverTheLimit_ReturnsAFieldError()
     {
         var response = await (await SignedInClient()).PostAsJsonAsync(
-            BasePath, new { name = new string('x', 101), balance = 1m });
+            BasePath, new { name = new string('x', 101), type = "Bank", balance = 1m });
 
         await AssertFieldError(response, "name");
     }
 
     [Fact]
-    public async Task Update_ChangesNameAndBalance()
+    public async Task Update_ChangesNameTypeAndBalance()
     {
         var client = await SignedInClient();
         var account = await Create(client, "Checking", 10m);
 
         var response = await client.PutAsJsonAsync(
-            $"{BasePath}/{account.Id}", new { name = " Everyday ", balance = 99.99m });
+            $"{BasePath}/{account.Id}", new { name = " Everyday ", type = "Cash", balance = 99.99m });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var expected = new AccountDto(account.Id, "Everyday", 99.99m);
+        var expected = new AccountDto(account.Id, "Everyday", "Cash", 99.99m);
         Assert.Equal(expected, await response.Content.ReadFromJsonAsync<AccountDto>());
         Assert.Equal([expected], await List(client));
     }
@@ -144,7 +192,7 @@ public class BankAccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFa
         var client = await SignedInClient();
         var account = await Create(client, "Checking", 10m);
 
-        var response = await client.PutAsJsonAsync($"{BasePath}/{account.Id}", new { name = "", balance = 5m });
+        var response = await client.PutAsJsonAsync($"{BasePath}/{account.Id}", new { name = "", type = "Bank", balance = 5m });
 
         await AssertFieldError(response, "name");
         Assert.Equal([account], await List(client));
@@ -154,7 +202,7 @@ public class BankAccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFa
     public async Task Update_UnknownAccount_Returns404()
     {
         var response = await (await SignedInClient()).PutAsJsonAsync(
-            $"{BasePath}/{Guid.NewGuid()}", new { name = "Checking", balance = 1m });
+            $"{BasePath}/{Guid.NewGuid()}", new { name = "Checking", type = "Bank", balance = 1m });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -197,7 +245,7 @@ public class BankAccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFa
         var stranger = await SignedInClient();
 
         var response = await stranger.PutAsJsonAsync(
-            $"{BasePath}/{account.Id}", new { name = "Hacked", balance = 0m });
+            $"{BasePath}/{account.Id}", new { name = "Hacked", type = "Bank", balance = 0m });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal([account], await List(owner));

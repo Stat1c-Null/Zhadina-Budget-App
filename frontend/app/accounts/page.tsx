@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { BankAccounts } from "./BankAccounts";
+import { Accounts } from "./Accounts";
 
 export const metadata: Metadata = { title: "Accounts · Zhadina Budget" };
 
 export default function AccountsPage() {
-  return <BankAccounts />;
+  return <Accounts />;
 }

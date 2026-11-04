@@ -3,10 +3,21 @@
 
 export type User = { id: string; email: string };
 
-export type BankAccount = { id: string; name: string; balance: number };
+// Matches the member names of the C# AccountType enum, which is what the API stores and sends.
+export type AccountType =
+  | "Bank"
+  | "Cash"
+  | "Investment"
+  | "RothIra"
+  | "TraditionalIra"
+  | "Retirement401k"
+  | "CreditCard"
+  | "Other";
 
-// balance is null when the field was left empty, so the backend's validation can report it.
-export type BankAccountInput = { name: string; balance: number | null };
+export type Account = { id: string; name: string; type: AccountType; balance: number };
+
+// type is "" and balance is null when left empty, so the backend's validation can report them.
+export type AccountInput = { name: string; type: AccountType | ""; balance: number | null };
 
 export type FieldErrors = Partial<Record<string, string[]>>;
 
@@ -54,9 +65,9 @@ export const login = (email: string, password: string) => send<User>("POST", "/a
 export const signOut = () => send<void>("POST", "/api/auth/sign-out");
 export const me = () => request<User>("/api/auth/me");
 
-export const listBankAccounts = () => request<BankAccount[]>("/api/bank-accounts");
-export const createBankAccount = (input: BankAccountInput) =>
-  send<BankAccount>("POST", "/api/bank-accounts", input);
-export const updateBankAccount = (id: string, input: BankAccountInput) =>
-  send<BankAccount>("PUT", `/api/bank-accounts/${id}`, input);
-export const deleteBankAccount = (id: string) => send<void>("DELETE", `/api/bank-accounts/${id}`);
+export const listAccounts = () => request<Account[]>("/api/accounts");
+export const createAccount = (input: AccountInput) =>
+  send<Account>("POST", "/api/accounts", input);
+export const updateAccount = (id: string, input: AccountInput) =>
+  send<Account>("PUT", `/api/accounts/${id}`, input);
+export const deleteAccount = (id: string) => send<void>("DELETE", `/api/accounts/${id}`);

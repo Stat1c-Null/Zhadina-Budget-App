@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Zhadina.Api.Data;
 using Zhadina.Api.Features.Auth;
-using Zhadina.Api.Features.BankAccounts;
+using Zhadina.Api.Features.Accounts;
 using Zhadina.Api.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -90,7 +90,7 @@ app.UseAuthorization();
 
 app.MapGet("/api/health", () => TypedResults.Ok(new { status = "ok" }));
 app.MapAuthEndpoints();
-app.MapBankAccountEndpoints();
+app.MapAccountEndpoints();
 
 app.Run();
 

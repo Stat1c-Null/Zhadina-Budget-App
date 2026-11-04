@@ -3,19 +3,33 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
+import { SelectField } from "@/components/SelectField";
 import { TextField } from "@/components/TextField";
 import {
   ApiError,
-  createBankAccount,
-  deleteBankAccount,
-  listBankAccounts,
-  updateBankAccount,
-  type BankAccount,
+  createAccount,
+  deleteAccount,
+  listAccounts,
+  updateAccount,
+  type Account,
+  type AccountType,
   type FieldErrors,
 } from "@/lib/api";
 
 // No currency symbol: accounts don't store a currency yet.
 const money = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Also sets the order of the options in the form.
+const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+  Bank: "Bank",
+  Cash: "Cash",
+  Investment: "Investment",
+  RothIra: "Roth IRA",
+  TraditionalIra: "Traditional IRA",
+  Retirement401k: "401(k)",
+  CreditCard: "Credit card",
+  Other: "Other",
+};
 
 const NEW_ACCOUNT = "new";
 
@@ -33,21 +47,21 @@ function ErrorMessage({ children }: { children: string }) {
   );
 }
 
-export function BankAccounts() {
+export function Accounts() {
   return <AppShell>{() => <AccountList />}</AppShell>;
 }
 
 function AccountList() {
-  const [accounts, setAccounts] = useState<BankAccount[] | null>(null);
+  const [accounts, setAccounts] = useState<Account[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   // Which form is open: an account's id, NEW_ACCOUNT, or none. One at a time keeps field ids unique.
   const [editing, setEditing] = useState<string | null>(null);
 
   useEffect(() => {
-    listBankAccounts().then(setAccounts, (error) => setLoadError(errorMessage(error)));
+    listAccounts().then(setAccounts, (error) => setLoadError(errorMessage(error)));
   }, []);
 
-  function onSaved(saved: BankAccount) {
+  function onSaved(saved: Account) {
     setAccounts((current) =>
       current?.some((account) => account.id === saved.id)
         ? current.map((account) => (account.id === saved.id ? saved : account))
@@ -76,7 +90,7 @@ function AccountList() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold">Bank accounts</h1>
+        <h1 className="text-3xl font-semibold">Accounts</h1>
         {editing !== NEW_ACCOUNT && <Button onClick={() => setEditing(NEW_ACCOUNT)}>Add account</Button>}
       </div>
 
@@ -116,7 +130,7 @@ function AccountRow({
   onEdit,
   onDeleted,
 }: {
-  account: BankAccount;
+  account: Account;
   onEdit: () => void;
   onDeleted: () => void;
 }) {
@@ -128,7 +142,7 @@ function AccountRow({
     setBusy(true);
     setError(null);
     try {
-      await deleteBankAccount(account.id);
+      await deleteAccount(account.id);
       onDeleted();
     } catch (caught) {
       setError(errorMessage(caught));
@@ -140,7 +154,10 @@ function AccountRow({
     <>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <span className="min-w-0 flex-1 basis-40 font-medium break-words">{account.name}</span>
+        <div className="min-w-0 flex-1 basis-40">
+          <p className="font-medium break-words">{account.name}</p>
+          <p className="text-sm text-muted">{ACCOUNT_TYPE_LABELS[account.type]}</p>
+        </div>
         <span className={`text-xl tabular-nums ${account.balance < 0 ? "text-danger" : ""}`}>
           {money.format(account.balance)}
         </span>
@@ -173,8 +190,8 @@ function AccountForm({
   onSaved,
   onCancel,
 }: {
-  account?: BankAccount;
-  onSaved: (account: BankAccount) => void;
+  account?: Account;
+  onSaved: (account: Account) => void;
   onCancel: () => void;
 }) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -185,13 +202,17 @@ function AccountForm({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const balance = String(form.get("balance") ?? "").trim();
-    const input = { name: String(form.get("name") ?? ""), balance: balance === "" ? null : Number(balance) };
+    const input = {
+      name: String(form.get("name") ?? ""),
+      type: String(form.get("type") ?? "") as AccountType | "",
+      balance: balance === "" ? null : Number(balance),
+    };
 
     setFieldErrors({});
     setFormError(null);
     setBusy(true);
     try {
-      onSaved(await (account ? updateBankAccount(account.id, input) : createBankAccount(input)));
+      onSaved(await (account ? updateAccount(account.id, input) : createAccount(input)));
     } catch (error) {
       if (error instanceof ApiError && Object.keys(error.fieldErrors).length > 0) {
         setFieldErrors(error.fieldErrors);
@@ -204,7 +225,7 @@ function AccountForm({
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <div className="grid gap-x-4 sm:grid-cols-[1fr_12rem]">
+      <div className="grid gap-x-4 sm:grid-cols-[1fr_11rem_10rem]">
         <TextField
           label="Account name"
           name="name"
@@ -215,6 +236,22 @@ function AccountForm({
           required
           errors={fieldErrors.name}
         />
+        <SelectField
+          label="Account type"
+          name="type"
+          defaultValue={account?.type ?? ""}
+          required
+          errors={fieldErrors.type}
+        >
+          <option value="" disabled>
+            Choose a type
+          </option>
+          {Object.entries(ACCOUNT_TYPE_LABELS).map(([type, label]) => (
+            <option key={type} value={type}>
+              {label}
+            </option>
+          ))}
+        </SelectField>
         <TextField
           label="Balance"
           name="balance"
