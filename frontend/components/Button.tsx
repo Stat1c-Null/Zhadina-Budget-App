@@ -4,6 +4,7 @@ const VARIANTS = {
   primary: "bg-primary text-white hover:bg-primary-hover",
   secondary: "border border-border text-text hover:bg-border/50",
   danger: "border border-danger/60 text-danger hover:bg-danger/10",
+  hud: "bg-bg/45 text-white hover:bg-bg/70",
 };
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof VARIANTS };
