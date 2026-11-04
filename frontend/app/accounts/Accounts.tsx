@@ -16,8 +16,9 @@ import {
   type FieldErrors,
 } from "@/lib/api";
 
-// No currency symbol: accounts don't store a currency yet.
-const money = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Accounts don't store a currency yet, so every balance is shown as US dollars.
+// The locale is fixed because some others would show USD as "US$".
+const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 // Also sets the order of the options in the form.
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
