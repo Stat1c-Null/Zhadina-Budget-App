@@ -164,6 +164,43 @@ public class AccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFactor
         Assert.Equal([account], await List(client));
     }
 
+    [Theory]
+    [InlineData("Savings")]
+    [InlineData("Investment")]
+    public async Task Create_CreditCardMarkedAsSavingsOrInvestment_ReturnsAFieldError(string purpose)
+    {
+        var client = await SignedInClient();
+
+        var response = await client.PostAsJsonAsync(
+            BasePath, new { name = "Visa", type = "CreditCard", balance = 500m, purpose });
+
+        await AssertFieldError(response, "purpose");
+        Assert.Empty(await List(client));
+    }
+
+    [Theory]
+    [InlineData("Spending")]
+    [InlineData(null)]
+    public async Task Create_CreditCardAsSpending_IsAllowed(string? purpose)
+    {
+        var account = await Create(await SignedInClient(), "Visa", 500m, "CreditCard", purpose);
+
+        Assert.Equal("Spending", account.Purpose);
+    }
+
+    [Fact]
+    public async Task Update_SavingsAccountToACreditCardStillMarkedSavings_ReturnsAFieldError_AndKeepsIt()
+    {
+        var client = await SignedInClient();
+        var account = await Create(client, "Rainy day", 100m, purpose: "Savings");
+
+        var response = await client.PutAsJsonAsync(
+            $"{BasePath}/{account.Id}", new { name = "Rainy day", type = "CreditCard", balance = 100m, purpose = "Savings" });
+
+        await AssertFieldError(response, "purpose");
+        Assert.Equal([account], await List(client));
+    }
+
     [Fact]
     public async Task Create_NameOverTheLimit_ReturnsAFieldError()
     {

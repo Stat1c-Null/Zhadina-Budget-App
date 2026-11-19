@@ -114,8 +114,14 @@ public static class AccountEndpoints
             errors["type"] = ["Choose a valid account type."];
 
         // Left out means Spending. Anything sent must be an exact name, for the same reason as the type.
-        if (request.Purpose is { } purpose && !Enum.GetNames<AccountPurpose>().Contains(purpose))
-            errors["purpose"] = ["Choose savings, investment or neither."];
+        // A credit card's balance is money owed, so it can't also count as savings or an investment.
+        if (request.Purpose is { } purpose)
+        {
+            if (!Enum.GetNames<AccountPurpose>().Contains(purpose))
+                errors["purpose"] = ["Choose savings, investment or neither."];
+            else if (request.Type == nameof(AccountType.CreditCard) && purpose != nameof(AccountPurpose.Spending))
+                errors["purpose"] = ["A credit card is money owed, so it can't be savings or an investment."];
+        }
 
         if (request.Balance is not { } balance)
             errors["balance"] = ["Balance is required."];

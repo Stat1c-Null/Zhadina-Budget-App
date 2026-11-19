@@ -8,6 +8,7 @@ import { ErrorMessage, errorMessage } from "@/components/ErrorMessage";
 import { HelpTip } from "@/components/HelpTip";
 import { SelectField } from "@/components/SelectField";
 import { TextField } from "@/components/TextField";
+import { netBalance } from "@/lib/accounts";
 import {
   ApiError,
   createAccount,
@@ -134,6 +135,7 @@ function AccountRow({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const marked = MARKED_PURPOSES.find(({ purpose }) => purpose === account.purpose);
+  const net = netBalance(account);
 
   async function onDelete() {
     setBusy(true);
@@ -158,9 +160,8 @@ function AccountRow({
             {marked && ` · ${marked.label}`}
           </p>
         </div>
-        <span className={`text-xl tabular-nums ${account.balance < 0 ? "text-danger" : ""}`}>
-          {money.format(account.balance)}
-        </span>
+        {/* Shown the way it counts in the totals, so a credit card reads as money owed. */}
+        <span className={`text-xl tabular-nums ${net < 0 ? "text-danger" : ""}`}>{money.format(net)}</span>
         {confirming ? (
           <div className="flex items-center gap-2">
             <Button variant="danger" onClick={onDelete} disabled={busy}>
@@ -200,6 +201,9 @@ function AccountForm({
   // Held in state so ticking one box can untick the other: an account is savings or investment, never both.
   const [purpose, setPurpose] = useState<AccountPurpose>(account?.purpose ?? "Spending");
   const purposeErrors = fieldErrors.purpose;
+  // Tracked so a credit card can relabel the balance and hide "Mark as": its balance is debt, never savings.
+  const [type, setType] = useState<AccountType | "">(account?.type ?? "");
+  const isCreditCard = type === "CreditCard";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -209,7 +213,8 @@ function AccountForm({
       name: String(form.get("name") ?? ""),
       type: String(form.get("type") ?? "") as AccountType | "",
       balance: balance === "" ? null : Number(balance),
-      purpose,
+      // The boxes keep their state while hidden, so switching back from credit card restores them.
+      purpose: isCreditCard ? ("Spending" as const) : purpose,
     };
 
     setFieldErrors({});
@@ -244,6 +249,7 @@ function AccountForm({
           label="Account type"
           name="type"
           defaultValue={account?.type ?? ""}
+          onChange={(event) => setType(event.target.value as AccountType | "")}
           required
           errors={fieldErrors.type}
         >
@@ -257,7 +263,7 @@ function AccountForm({
           ))}
         </SelectField>
         <TextField
-          label="Balance"
+          label={isCreditCard ? "Amount owed" : "Balance"}
           name="balance"
           type="number"
           step="0.01"
@@ -271,6 +277,7 @@ function AccountForm({
       {/* Named by the "Mark as" text alone, so the help button inside the legend doesn't join the group's name. */}
       <fieldset
         className="mb-4"
+        hidden={isCreditCard}
         aria-labelledby="purpose-legend"
         aria-describedby={purposeErrors?.length ? "purpose-error" : undefined}
       >

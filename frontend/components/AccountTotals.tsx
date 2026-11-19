@@ -1,9 +1,10 @@
+import { netBalance } from "@/lib/accounts";
 import type { Account } from "@/lib/api";
 import { money } from "@/lib/money";
 
-// Any account can hold a negative balance (an overdraft, a credit card owed), so assets and debts
-// are split by the sign of the balance, not by the account type.
-// Savings and investments add up every account the user marked that way, whatever its sign or type.
+// Assets and debts are split by the sign of each account's net balance: a credit card always counts as debt,
+// and any other account does when it's overdrawn (see netBalance).
+// Savings and investments add up every account the user marked that way. Credit cards can't be marked.
 export function AccountTotals({ accounts }: { accounts: Account[] }) {
   // Summed in whole cents: adding decimal dollars directly drifts (0.1 + 0.2 !== 0.3).
   let assetCents = 0;
@@ -11,7 +12,7 @@ export function AccountTotals({ accounts }: { accounts: Account[] }) {
   let savingsCents = 0;
   let investmentCents = 0;
   for (const account of accounts) {
-    const cents = Math.round(account.balance * 100);
+    const cents = Math.round(netBalance(account) * 100);
     if (cents >= 0) assetCents += cents;
     else debtCents += cents;
     if (account.purpose === "Savings") savingsCents += cents;
