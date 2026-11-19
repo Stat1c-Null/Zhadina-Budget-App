@@ -5,6 +5,7 @@ import { AccountTotals } from "@/components/AccountTotals";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { ErrorMessage, errorMessage } from "@/components/ErrorMessage";
+import { HelpTip } from "@/components/HelpTip";
 import { SelectField } from "@/components/SelectField";
 import { TextField } from "@/components/TextField";
 import {
@@ -14,6 +15,7 @@ import {
   listAccounts,
   updateAccount,
   type Account,
+  type AccountPurpose,
   type AccountType,
   type FieldErrors,
 } from "@/lib/api";
@@ -30,6 +32,12 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   CreditCard: "Credit card",
   Other: "Other",
 };
+
+// The purposes that get a checkbox, in form order. Spending has none: it's what an account is with neither ticked.
+const MARKED_PURPOSES: { purpose: Exclude<AccountPurpose, "Spending">; label: string }[] = [
+  { purpose: "Savings", label: "Savings" },
+  { purpose: "Investment", label: "Investment" },
+];
 
 const NEW_ACCOUNT = "new";
 
@@ -125,6 +133,7 @@ function AccountRow({
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const marked = MARKED_PURPOSES.find(({ purpose }) => purpose === account.purpose);
 
   async function onDelete() {
     setBusy(true);
@@ -144,7 +153,10 @@ function AccountRow({
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1 basis-40">
           <p className="font-medium break-words">{account.name}</p>
-          <p className="text-sm text-muted">{ACCOUNT_TYPE_LABELS[account.type]}</p>
+          <p className="text-sm text-muted">
+            {ACCOUNT_TYPE_LABELS[account.type]}
+            {marked && ` · ${marked.label}`}
+          </p>
         </div>
         <span className={`text-xl tabular-nums ${account.balance < 0 ? "text-danger" : ""}`}>
           {money.format(account.balance)}
@@ -185,6 +197,9 @@ function AccountForm({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Held in state so ticking one box can untick the other: an account is savings or investment, never both.
+  const [purpose, setPurpose] = useState<AccountPurpose>(account?.purpose ?? "Spending");
+  const purposeErrors = fieldErrors.purpose;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -194,6 +209,7 @@ function AccountForm({
       name: String(form.get("name") ?? ""),
       type: String(form.get("type") ?? "") as AccountType | "",
       balance: balance === "" ? null : Number(balance),
+      purpose,
     };
 
     setFieldErrors({});
@@ -251,6 +267,56 @@ function AccountForm({
           errors={fieldErrors.balance}
         />
       </div>
+
+      {/* Named by the "Mark as" text alone, so the help button inside the legend doesn't join the group's name. */}
+      <fieldset
+        className="mb-4"
+        aria-labelledby="purpose-legend"
+        aria-describedby={purposeErrors?.length ? "purpose-error" : undefined}
+      >
+        <legend className="mb-1 text-sm font-medium">
+          {/* relative: the help text lines up with the legend's left edge, which keeps it on screen on phones. */}
+          <span className="relative inline-flex items-center gap-1">
+            <span id="purpose-legend">Mark as</span>
+            <HelpTip label="What do Savings and Investment mean?">
+              <span className="block">
+                <strong>Savings</strong> is money you set aside and keep easy to reach, like an emergency fund or a
+                savings account.
+              </span>
+              <span className="block">
+                <strong>Investment</strong> is money you put into stocks, funds or retirement accounts to grow over
+                time. Its value can go down as well as up.
+              </span>
+              <span className="block">
+                Ticking one adds this account to the Savings or Investments total. An account can be one or the other,
+                not both. Leave both unticked for everyday spending money.
+              </span>
+            </HelpTip>
+          </span>
+        </legend>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          {MARKED_PURPOSES.map(({ purpose: value, label }) => (
+            <label key={value} className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                name="purpose"
+                value={value}
+                checked={purpose === value}
+                onChange={(event) => setPurpose(event.target.checked ? value : "Spending")}
+                className="size-4 cursor-pointer accent-primary"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        {purposeErrors?.length ? (
+          <ul id="purpose-error" className="mt-1 text-sm text-danger">
+            {purposeErrors.map((error) => (
+              <li key={error}>{error}</li>
+            ))}
+          </ul>
+        ) : null}
+      </fieldset>
 
       {formError && <ErrorMessage>{formError}</ErrorMessage>}
 

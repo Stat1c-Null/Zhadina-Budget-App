@@ -11,7 +11,7 @@ public class AccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFactor
     private const string BasePath = "/api/accounts";
 
     // Declared here rather than reusing the API's type so these tests pin the JSON contract the frontend relies on.
-    private record AccountDto(Guid Id, string Name, string Type, decimal Balance);
+    private record AccountDto(Guid Id, string Name, string Type, decimal Balance, string Purpose);
 
     private async Task<HttpClient> SignedInClient()
     {
@@ -23,9 +23,11 @@ public class AccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFactor
         return client;
     }
 
-    private static async Task<AccountDto> Create(HttpClient client, string name, decimal balance, string type = "Bank")
+    // A null purpose is sent as JSON null, which the API treats like a missing field.
+    private static async Task<AccountDto> Create(
+        HttpClient client, string name, decimal balance, string type = "Bank", string? purpose = null)
     {
-        var response = await client.PostAsJsonAsync(BasePath, new { name, type, balance });
+        var response = await client.PostAsJsonAsync(BasePath, new { name, type, balance, purpose });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<AccountDto>())!;
     }
@@ -172,18 +174,88 @@ public class AccountEndpointsTests(ApiFactory factory) : IClassFixture<ApiFactor
     }
 
     [Fact]
-    public async Task Update_ChangesNameTypeAndBalance()
+    public async Task Create_WithoutAPurpose_MakesASpendingAccount()
+    {
+        var client = await SignedInClient();
+
+        var response = await client.PostAsJsonAsync(BasePath, new { name = "Checking", type = "Bank", balance = 1m });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("Spending", (await response.Content.ReadFromJsonAsync<AccountDto>())!.Purpose);
+        Assert.Equal("Spending", (await List(client)).Single().Purpose);
+    }
+
+    [Theory]
+    [InlineData("Spending")]
+    [InlineData("Savings")]
+    [InlineData("Investment")]
+    public async Task Create_StoresEachPurpose(string purpose)
+    {
+        var client = await SignedInClient();
+
+        var account = await Create(client, "Account", 1m, purpose: purpose);
+
+        Assert.Equal(purpose, account.Purpose);
+        Assert.Equal([account], await List(client));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("savings")] // Names match exactly, like the type.
+    [InlineData("SavingsAndInvestment")]
+    [InlineData("1")] // Enum.TryParse would accept a member number like this one.
+    public async Task Create_InvalidPurpose_ReturnsAFieldError(string purpose)
+    {
+        var client = await SignedInClient();
+
+        var response = await client.PostAsJsonAsync(
+            BasePath, new { name = "Checking", type = "Bank", balance = 1m, purpose });
+
+        await AssertFieldError(response, "purpose");
+        Assert.Empty(await List(client));
+    }
+
+    [Fact]
+    public async Task Update_ChangesNameTypeBalanceAndPurpose()
     {
         var client = await SignedInClient();
         var account = await Create(client, "Checking", 10m);
 
         var response = await client.PutAsJsonAsync(
-            $"{BasePath}/{account.Id}", new { name = " Everyday ", type = "Cash", balance = 99.99m });
+            $"{BasePath}/{account.Id}",
+            new { name = " Everyday ", type = "Cash", balance = 99.99m, purpose = "Savings" });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var expected = new AccountDto(account.Id, "Everyday", "Cash", 99.99m);
+        var expected = new AccountDto(account.Id, "Everyday", "Cash", 99.99m, "Savings");
         Assert.Equal(expected, await response.Content.ReadFromJsonAsync<AccountDto>());
         Assert.Equal([expected], await List(client));
+    }
+
+    // PUT replaces the whole account, so leaving the purpose out clears it back to Spending.
+    [Fact]
+    public async Task Update_WithoutAPurpose_MakesItASpendingAccount()
+    {
+        var client = await SignedInClient();
+        var account = await Create(client, "Brokerage", 10m, "Investment", "Investment");
+
+        var response = await client.PutAsJsonAsync(
+            $"{BasePath}/{account.Id}", new { name = "Brokerage", type = "Investment", balance = 10m });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal([account with { Purpose = "Spending" }], await List(client));
+    }
+
+    [Fact]
+    public async Task Update_InvalidPurpose_ReturnsAFieldError_AndKeepsTheOldPurpose()
+    {
+        var client = await SignedInClient();
+        var account = await Create(client, "Rainy day", 10m, purpose: "Savings");
+
+        var response = await client.PutAsJsonAsync(
+            $"{BasePath}/{account.Id}", new { name = "Rainy day", type = "Bank", balance = 10m, purpose = "Both" });
+
+        await AssertFieldError(response, "purpose");
+        Assert.Equal([account], await List(client));
     }
 
     [Fact]

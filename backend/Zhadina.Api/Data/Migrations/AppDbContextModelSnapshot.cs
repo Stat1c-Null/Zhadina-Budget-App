@@ -104,6 +104,11 @@ namespace Zhadina.Api.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(30)

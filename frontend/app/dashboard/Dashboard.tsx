@@ -69,7 +69,7 @@ function Overview() {
           <Link href="/accounts" className={LINK}>
             Add one
           </Link>{" "}
-          to see your net worth, assets and debts here.
+          to see your net worth, assets, debts, savings and investments here.
         </p>
       )}
 

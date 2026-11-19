@@ -26,7 +26,7 @@ public static class AccountEndpoints
         var accounts = await db.Accounts
             .Where(a => a.UserId == userId)
             .OrderBy(a => a.CreatedAt)
-            .Select(a => new AccountResponse(a.Id, a.Name, a.Type, a.Balance))
+            .Select(a => new AccountResponse(a.Id, a.Name, a.Type, a.Balance, a.Purpose))
             .ToListAsync();
         return TypedResults.Ok(accounts);
     }
@@ -43,6 +43,7 @@ public static class AccountEndpoints
             Name = request.Name!.Trim(),
             Type = Enum.Parse<AccountType>(request.Type!),
             Balance = request.Balance!.Value,
+            Purpose = ParsePurpose(request.Purpose),
             CreatedAt = DateTimeOffset.UtcNow,
         };
         db.Accounts.Add(account);
@@ -64,6 +65,7 @@ public static class AccountEndpoints
         account.Name = request.Name!.Trim();
         account.Type = Enum.Parse<AccountType>(request.Type!);
         account.Balance = request.Balance!.Value;
+        account.Purpose = ParsePurpose(request.Purpose);
         await db.SaveChangesAsync();
 
         return TypedResults.Ok(ToResponse(account));
@@ -90,7 +92,11 @@ public static class AccountEndpoints
     }
 
     private static AccountResponse ToResponse(Account account) =>
-        new(account.Id, account.Name, account.Type, account.Balance);
+        new(account.Id, account.Name, account.Type, account.Balance, account.Purpose);
+
+    // Only called after Validate, so the purpose is either missing or an exact member name.
+    private static AccountPurpose ParsePurpose(string? purpose) =>
+        purpose is null ? AccountPurpose.Spending : Enum.Parse<AccountPurpose>(purpose);
 
     private static Dictionary<string, string[]>? Validate(AccountRequest request)
     {
@@ -106,6 +112,10 @@ public static class AccountEndpoints
             errors["type"] = ["Account type is required."];
         else if (!Enum.GetNames<AccountType>().Contains(request.Type))
             errors["type"] = ["Choose a valid account type."];
+
+        // Left out means Spending. Anything sent must be an exact name, for the same reason as the type.
+        if (request.Purpose is { } purpose && !Enum.GetNames<AccountPurpose>().Contains(purpose))
+            errors["purpose"] = ["Choose savings, investment or neither."];
 
         if (request.Balance is not { } balance)
             errors["balance"] = ["Balance is required."];

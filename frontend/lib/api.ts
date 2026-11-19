@@ -14,10 +14,18 @@ export type AccountType =
   | "CreditCard"
   | "Other";
 
-export type Account = { id: string; name: string; type: AccountType; balance: number };
+// Matches the C# AccountPurpose enum. Spending is what an account is when neither savings nor investment is ticked.
+export type AccountPurpose = "Spending" | "Savings" | "Investment";
+
+export type Account = { id: string; name: string; type: AccountType; balance: number; purpose: AccountPurpose };
 
 // type is "" and balance is null when left empty, so the backend's validation can report them.
-export type AccountInput = { name: string; type: AccountType | ""; balance: number | null };
+export type AccountInput = {
+  name: string;
+  type: AccountType | "";
+  balance: number | null;
+  purpose: AccountPurpose;
+};
 
 // Each setting is null until the user saves one. Saving sends every setting; null clears it.
 export type Settings = { priorEarnings: number | null };

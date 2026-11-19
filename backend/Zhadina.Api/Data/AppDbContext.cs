@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             account.Property(a => a.Name).HasMaxLength(Account.NameMaxLength);
             account.Property(a => a.Type).HasConversion<string>().HasMaxLength(Account.TypeMaxLength);
             account.Property(a => a.Balance).HasPrecision(14, 2);
+            account.Property(a => a.Purpose).HasConversion<string>().HasMaxLength(Account.PurposeMaxLength);
             account.HasOne<AppUser>().WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 

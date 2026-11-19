@@ -3,20 +3,28 @@ import { money } from "@/lib/money";
 
 // Any account can hold a negative balance (an overdraft, a credit card owed), so assets and debts
 // are split by the sign of the balance, not by the account type.
+// Savings and investments add up every account the user marked that way, whatever its sign or type.
 export function AccountTotals({ accounts }: { accounts: Account[] }) {
   // Summed in whole cents: adding decimal dollars directly drifts (0.1 + 0.2 !== 0.3).
   let assetCents = 0;
   let debtCents = 0;
+  let savingsCents = 0;
+  let investmentCents = 0;
   for (const account of accounts) {
     const cents = Math.round(account.balance * 100);
     if (cents >= 0) assetCents += cents;
     else debtCents += cents;
+    if (account.purpose === "Savings") savingsCents += cents;
+    else if (account.purpose === "Investment") investmentCents += cents;
   }
 
+  // Five cards in three columns: savings and investments start the second row.
   const totals = [
     { label: "Net worth", cents: assetCents + debtCents },
     { label: "Assets", cents: assetCents },
     { label: "Debts", cents: debtCents },
+    { label: "Savings", cents: savingsCents },
+    { label: "Investments", cents: investmentCents },
   ];
 
   return (
