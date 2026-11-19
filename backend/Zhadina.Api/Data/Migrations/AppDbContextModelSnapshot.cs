@@ -184,6 +184,20 @@ namespace Zhadina.Api.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Zhadina.Api.Data.UserSettings", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("PriorEarnings")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserSettings");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
                     b.HasOne("Zhadina.Api.Data.AppUser", null)
@@ -216,6 +230,15 @@ namespace Zhadina.Api.Data.Migrations
                     b.HasOne("Zhadina.Api.Data.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zhadina.Api.Data.UserSettings", b =>
+                {
+                    b.HasOne("Zhadina.Api.Data.AppUser", null)
+                        .WithOne()
+                        .HasForeignKey("Zhadina.Api.Data.UserSettings", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

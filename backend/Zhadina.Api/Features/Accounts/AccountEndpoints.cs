@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Zhadina.Api.Data;
+using Zhadina.Api.Infrastructure;
 
 namespace Zhadina.Api.Features.Accounts;
 
@@ -21,7 +22,7 @@ public static class AccountEndpoints
 
     private static async Task<Ok<List<AccountResponse>>> List(ClaimsPrincipal principal, AppDbContext db)
     {
-        var userId = UserId(principal);
+        var userId = principal.UserId();
         var accounts = await db.Accounts
             .Where(a => a.UserId == userId)
             .OrderBy(a => a.CreatedAt)
@@ -38,7 +39,7 @@ public static class AccountEndpoints
 
         var account = new Account
         {
-            UserId = UserId(principal),
+            UserId = principal.UserId(),
             Name = request.Name!.Trim(),
             Type = Enum.Parse<AccountType>(request.Type!),
             Balance = request.Balance!.Value,
@@ -84,13 +85,9 @@ public static class AccountEndpoints
     // Another user's account answers exactly like a missing one, so ids can't be probed.
     private static Task<Account?> FindOwned(AppDbContext db, Guid id, ClaimsPrincipal principal)
     {
-        var userId = UserId(principal);
+        var userId = principal.UserId();
         return db.Accounts.SingleOrDefaultAsync(a => a.Id == id && a.UserId == userId);
     }
-
-    // RequireAuthorization on the group guarantees a signed-in principal, which always carries this claim.
-    private static Guid UserId(ClaimsPrincipal principal) =>
-        Guid.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     private static AccountResponse ToResponse(Account account) =>
         new(account.Id, account.Name, account.Type, account.Balance);

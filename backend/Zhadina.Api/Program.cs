@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Zhadina.Api.Data;
 using Zhadina.Api.Features.Auth;
 using Zhadina.Api.Features.Accounts;
+using Zhadina.Api.Features.Settings;
 using Zhadina.Api.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -91,6 +92,7 @@ app.UseAuthorization();
 app.MapGet("/api/health", () => TypedResults.Ok(new { status = "ok" }));
 app.MapAuthEndpoints();
 app.MapAccountEndpoints();
+app.MapSettingsEndpoints();
 
 app.Run();
 

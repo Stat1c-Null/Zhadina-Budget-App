@@ -9,6 +9,7 @@ import type { User } from "@/lib/api";
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/accounts", label: "Accounts" },
+  { href: "/settings", label: "Settings" },
 ];
 
 // The native popover gives us Escape, click-outside and focus return; see .hud-* in globals.css for the look.

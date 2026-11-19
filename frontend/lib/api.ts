@@ -19,6 +19,9 @@ export type Account = { id: string; name: string; type: AccountType; balance: nu
 // type is "" and balance is null when left empty, so the backend's validation can report them.
 export type AccountInput = { name: string; type: AccountType | ""; balance: number | null };
 
+// Each setting is null until the user saves one. Saving sends every setting; null clears it.
+export type Settings = { priorEarnings: number | null };
+
 export type FieldErrors = Partial<Record<string, string[]>>;
 
 export class ApiError extends Error {
@@ -71,3 +74,6 @@ export const createAccount = (input: AccountInput) =>
 export const updateAccount = (id: string, input: AccountInput) =>
   send<Account>("PUT", `/api/accounts/${id}`, input);
 export const deleteAccount = (id: string) => send<void>("DELETE", `/api/accounts/${id}`);
+
+export const getSettings = () => request<Settings>("/api/settings");
+export const updateSettings = (settings: Settings) => send<Settings>("PUT", "/api/settings", settings);
