@@ -77,6 +77,13 @@ public class AddAccountPurposeMigrationTests : IAsyncLifetime
 
         await MigrateTo(db, BeforePurpose);
 
+        var purposeColumns = await db.Database
+            .SqlQuery<int>($"""
+                SELECT count(*)::int AS "Value" FROM information_schema.columns
+                WHERE table_name = 'Accounts' AND column_name = 'Purpose'
+                """)
+            .SingleAsync();
+        Assert.Equal(0, purposeColumns);
         var names = await db.Database
             .SqlQuery<string>($"""SELECT "Name" AS "Value" FROM "Accounts" """)
             .ToListAsync();
