@@ -1,10 +1,13 @@
 import type { InputHTMLAttributes } from "react";
 
-type Props = InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; errors?: string[] };
+type Props = InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; errors?: string[]; hint?: string };
 
-export function TextField({ label, name, errors, ...input }: Props) {
+// `hint` is short help shown under the field and read out with it.
+export function TextField({ label, name, errors, hint, ...input }: Props) {
   const errorId = `${name}-error`;
+  const hintId = `${name}-hint`;
   const hasErrors = !!errors?.length;
+  const describedBy = [hint && hintId, hasErrors && errorId].filter(Boolean).join(" ");
 
   return (
     <div className="mb-4">
@@ -15,10 +18,15 @@ export function TextField({ label, name, errors, ...input }: Props) {
         id={name}
         name={name}
         aria-invalid={hasErrors}
-        aria-describedby={hasErrors ? errorId : undefined}
+        aria-describedby={describedBy || undefined}
         className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-text placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/40 focus:outline-none aria-invalid:border-danger"
         {...input}
       />
+      {hint && (
+        <p id={hintId} className="mt-1 text-sm text-muted">
+          {hint}
+        </p>
+      )}
       {hasErrors && (
         <ul id={errorId} className="mt-1 text-sm text-danger">
           {errors.map((error) => (

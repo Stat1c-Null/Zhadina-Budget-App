@@ -91,7 +91,7 @@ public static class AccountEndpoints
         return db.Accounts.SingleOrDefaultAsync(a => a.Id == id && a.UserId == userId);
     }
 
-    private static AccountResponse ToResponse(Account account) =>
+    internal static AccountResponse ToResponse(Account account) =>
         new(account.Id, account.Name, account.Type, account.Balance, account.Purpose);
 
     // Only called after Validate, so the purpose is either missing or an exact member name.

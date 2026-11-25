@@ -9,6 +9,7 @@ import type { User } from "@/lib/api";
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/accounts", label: "Accounts" },
+  { href: "/transactions", label: "Transactions" },
   { href: "/settings", label: "Settings" },
 ];
 

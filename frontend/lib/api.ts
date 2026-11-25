@@ -27,6 +27,53 @@ export type AccountInput = {
   purpose: AccountPurpose;
 };
 
+// Matches the C# TransactionKind enum.
+export type TransactionKind = "Expense" | "Income" | "Transfer";
+
+// Matches the C# TransactionCategory enum. Which kind each belongs to is in lib/transactions.ts.
+export type TransactionCategory =
+  | "Groceries"
+  | "Dining"
+  | "Housing"
+  | "Utilities"
+  | "Transport"
+  | "Health"
+  | "Shopping"
+  | "Entertainment"
+  | "Subscriptions"
+  | "Travel"
+  | "Education"
+  | "Fees"
+  | "Salary"
+  | "Business"
+  | "Interest"
+  | "InvestmentIncome"
+  | "Refunds"
+  | "Gifts"
+  | "Other";
+
+// accountId is the account the money leaves on a transfer; toAccountId is set only on transfers.
+// date is "YYYY-MM-DD", a calendar day with no time zone.
+export type Transaction = {
+  id: string;
+  kind: TransactionKind;
+  accountId: string;
+  toAccountId: string | null;
+  amount: number;
+  date: string;
+  category: TransactionCategory | null;
+  description: string | null;
+};
+
+// accountId is "" and amount null when left empty, so the backend's validation can report them.
+export type TransactionInput = Omit<Transaction, "id" | "amount" | "description"> & {
+  amount: number | null;
+  description: string;
+};
+
+// Saving answers with the accounts it touched, at their new balances.
+export type TransactionChange = { transaction: Transaction; accounts: Account[] };
+
 // Each setting is null until the user saves one. Saving sends every setting; null clears it.
 export type Settings = { priorEarnings: number | null };
 
@@ -82,6 +129,14 @@ export const createAccount = (input: AccountInput) =>
 export const updateAccount = (id: string, input: AccountInput) =>
   send<Account>("PUT", `/api/accounts/${id}`, input);
 export const deleteAccount = (id: string) => send<void>("DELETE", `/api/accounts/${id}`);
+
+export const listTransactions = () => request<Transaction[]>("/api/transactions");
+export const createTransaction = (input: TransactionInput) =>
+  send<TransactionChange>("POST", "/api/transactions", input);
+export const updateTransaction = (id: string, input: TransactionInput) =>
+  send<TransactionChange>("PUT", `/api/transactions/${id}`, input);
+export const deleteTransaction = (id: string) =>
+  send<{ accounts: Account[] }>("DELETE", `/api/transactions/${id}`);
 
 export const getSettings = () => request<Settings>("/api/settings");
 export const updateSettings = (settings: Settings) => send<Settings>("PUT", "/api/settings", settings);

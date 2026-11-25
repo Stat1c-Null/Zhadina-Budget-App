@@ -27,6 +27,39 @@ Login and sign-up are rate limited per IP (10/min). Five failed logins lock the 
 
 Prerequisites: .NET 10 SDK, Node 22, and PostgreSQL on `localhost:5432` with a `postgres` user that can log in without a password (trust auth). The connection string is in `backend/Zhadina.Api/appsettings.Development.json`.
 
+### PostgreSQL on Linux (container)
+
+On Linux, Postgres runs in a Podman container. With Docker, use the same commands and replace `podman` with `docker`.
+
+Create the container once. It runs a trust-auth server on `127.0.0.1:5432` with a `zhadina_dev` database, and stores the data in the `zhadina-pgdata` volume, so the data survives restarts:
+
+```bash
+podman run -d --name zhadina-postgres \
+  -p 127.0.0.1:5432:5432 \
+  -e POSTGRES_HOST_AUTH_METHOD=trust \
+  -e POSTGRES_DB=zhadina_dev \
+  -v zhadina-pgdata:/var/lib/postgresql/data \
+  postgres:17
+```
+
+Trust auth means there's no password, so keep the port bound to `127.0.0.1`.
+
+After that, use `start` instead of `run`. The container doesn't start by itself after a reboot, and `dev.sh` doesn't start it either:
+
+```bash
+podman start zhadina-postgres
+podman exec zhadina-postgres pg_isready -U postgres   # expect "accepting connections"
+podman stop zhadina-postgres                          # when you're done
+```
+
+Running `podman run` a second time fails, because a container with that name already exists. If `start` fails because port 5432 is in use, another Postgres server or container is using that port. Stop it first.
+
+To wipe the local database, run `podman rm -f zhadina-postgres && podman volume rm zhadina-pgdata`, then run the create command again. The API re-applies migrations the next time it starts.
+
+### Running the app
+
+With Postgres running:
+
 ```bash
 bash scripts/linux/dev.sh    # API on 127.0.0.1:5000 (applies migrations on start) + Next.js on :3000
 ```

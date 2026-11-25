@@ -163,7 +163,8 @@ function AccountRow({
         {/* Shown the way it counts in the totals, so a credit card reads as money owed. */}
         <span className={`text-xl tabular-nums ${net < 0 ? "text-danger" : ""}`}>{money.format(net)}</span>
         {confirming ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted">Its transactions are deleted too.</span>
             <Button variant="danger" onClick={onDelete} disabled={busy}>
               {busy ? "Deleting…" : "Confirm delete"}
             </Button>
@@ -269,6 +270,7 @@ function AccountForm({
           step="0.01"
           inputMode="decimal"
           defaultValue={account?.balance.toFixed(2)}
+          hint={isCreditCard ? "Enter a negative amount if the card is overpaid." : undefined}
           required
           errors={fieldErrors.balance}
         />

@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const AUTH_COOKIE = "zhadina_auth";
 
 // Signed-in pages. Each also needs an entry in config.matcher below, or this never runs for it.
-const PROTECTED = ["/dashboard", "/accounts", "/settings"];
+const PROTECTED = ["/dashboard", "/accounts", "/transactions", "/settings"];
 
 // Optimistic redirects only: this checks that the cookie exists, not that it's valid.
 // The real check is the backend's /api/auth/me (see components/AppShell.tsx).
@@ -24,5 +24,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*", "/accounts/:path*", "/settings/:path*", "/login", "/sign-up"],
+  matcher: ["/", "/dashboard/:path*", "/accounts/:path*", "/transactions/:path*", "/settings/:path*", "/login", "/sign-up"],
 };

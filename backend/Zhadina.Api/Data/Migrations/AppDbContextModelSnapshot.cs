@@ -189,6 +189,65 @@ namespace Zhadina.Api.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Zhadina.Api.Data.Transaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("ToAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("ToAccountId");
+
+                    b.HasIndex("UserId", "Date", "CreatedAt")
+                        .IsDescending(false, true, true);
+
+                    b.ToTable("Transactions", t =>
+                        {
+                            t.HasCheckConstraint("CK_Transactions_AmountPositive", "\"Amount\" > 0");
+
+                            t.HasCheckConstraint("CK_Transactions_NoCategoryOnTransfers", "\"Kind\" <> 'Transfer' OR \"Category\" IS NULL");
+
+                            t.HasCheckConstraint("CK_Transactions_ToAccountOnlyOnTransfers", "(\"Kind\" = 'Transfer') = (\"ToAccountId\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Transactions_TransferBetweenTwoAccounts", "\"ToAccountId\" <> \"AccountId\"");
+                        });
+                });
+
             modelBuilder.Entity("Zhadina.Api.Data.UserSettings", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -232,6 +291,26 @@ namespace Zhadina.Api.Data.Migrations
 
             modelBuilder.Entity("Zhadina.Api.Data.Account", b =>
                 {
+                    b.HasOne("Zhadina.Api.Data.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zhadina.Api.Data.Transaction", b =>
+                {
+                    b.HasOne("Zhadina.Api.Data.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Zhadina.Api.Data.Account", null)
+                        .WithMany()
+                        .HasForeignKey("ToAccountId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("Zhadina.Api.Data.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
